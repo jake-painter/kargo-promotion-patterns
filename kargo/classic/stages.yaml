@@ -1,0 +1,152 @@
+# Classic pattern: promotion COMMITS a tag bump to main; Argo CD renders at sync time.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: guestbook-classic
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: guestbook
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      vars:
+        - name: gitopsRepo
+          value: https://github.com/jake-painter/guestbook-kargo.git
+        - name: imageRepo
+          value: ghcr.io/jake-painter/guestbook
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: ${{ vars.gitopsRepo }}
+            checkout:
+              - branch: main
+                path: ./out
+        - uses: kustomize-set-image
+          config:
+            path: ./out/classic/${{ ctx.stage }}
+            images:
+              - image: ${{ vars.imageRepo }}
+                tag: ${{ imageFrom(vars.imageRepo).Tag }}
+        - uses: git-commit
+          as: commit
+          config:
+            path: ./out
+            message: 'classic(${{ ctx.stage }}): promote ${{ imageFrom(vars.imageRepo).Tag }}'
+        - uses: git-push
+          config:
+            path: ./out
+        - uses: argocd-update
+          config:
+            apps:
+              - name: guestbook-classic-${{ ctx.stage }}
+                sources:
+                  - repoURL: ${{ vars.gitopsRepo }}
+                    desiredRevision: ${{ outputs.commit.commit }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: staging
+  namespace: guestbook-classic
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: guestbook
+      sources:
+        stages:
+          - dev  # freight must pass dev before it is promotable here
+  promotionTemplate:
+    spec:
+      vars:
+        - name: gitopsRepo
+          value: https://github.com/jake-painter/guestbook-kargo.git
+        - name: imageRepo
+          value: ghcr.io/jake-painter/guestbook
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: ${{ vars.gitopsRepo }}
+            checkout:
+              - branch: main
+                path: ./out
+        - uses: kustomize-set-image
+          config:
+            path: ./out/classic/${{ ctx.stage }}
+            images:
+              - image: ${{ vars.imageRepo }}
+                tag: ${{ imageFrom(vars.imageRepo).Tag }}
+        - uses: git-commit
+          as: commit
+          config:
+            path: ./out
+            message: 'classic(${{ ctx.stage }}): promote ${{ imageFrom(vars.imageRepo).Tag }}'
+        - uses: git-push
+          config:
+            path: ./out
+        - uses: argocd-update
+          config:
+            apps:
+              - name: guestbook-classic-${{ ctx.stage }}
+                sources:
+                  - repoURL: ${{ vars.gitopsRepo }}
+                    desiredRevision: ${{ outputs.commit.commit }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: guestbook-classic
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: guestbook
+      sources:
+        stages:
+          - staging  # freight must pass staging before it is promotable here
+  promotionTemplate:
+    spec:
+      vars:
+        - name: gitopsRepo
+          value: https://github.com/jake-painter/guestbook-kargo.git
+        - name: imageRepo
+          value: ghcr.io/jake-painter/guestbook
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: ${{ vars.gitopsRepo }}
+            checkout:
+              - branch: main
+                path: ./out
+        - uses: kustomize-set-image
+          config:
+            path: ./out/classic/${{ ctx.stage }}
+            images:
+              - image: ${{ vars.imageRepo }}
+                tag: ${{ imageFrom(vars.imageRepo).Tag }}
+        - uses: git-commit
+          as: commit
+          config:
+            path: ./out
+            message: 'classic(${{ ctx.stage }}): promote ${{ imageFrom(vars.imageRepo).Tag }}'
+        - uses: git-push
+          config:
+            path: ./out
+        - uses: argocd-update
+          config:
+            apps:
+              - name: guestbook-classic-${{ ctx.stage }}
+                sources:
+                  - repoURL: ${{ vars.gitopsRepo }}
+                    desiredRevision: ${{ outputs.commit.commit }}

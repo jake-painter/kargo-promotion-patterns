@@ -1,0 +1,182 @@
+# Rendered pattern: promotion RENDERS plain manifests to env/<stage> branches; main never changes.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: guestbook-rendered
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: guestbook
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      vars:
+        - name: gitopsRepo
+          value: https://github.com/jake-painter/guestbook-kargo.git
+        - name: imageRepo
+          value: ghcr.io/jake-painter/guestbook
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: ${{ vars.gitopsRepo }}
+            checkout:
+              - branch: main
+                path: ./src
+              - branch: env/${{ ctx.stage }}
+                create: true
+                path: ./out
+        - uses: git-clear
+          config:
+            path: ./out
+        - uses: kustomize-set-image
+          config:
+            path: ./src/rendered/${{ ctx.stage }}
+            images:
+              - image: ${{ vars.imageRepo }}
+                tag: ${{ imageFrom(vars.imageRepo).Tag }}
+        - uses: kustomize-build
+          config:
+            path: ./src/rendered/${{ ctx.stage }}
+            outPath: ./out/manifests.yaml
+        - uses: git-commit
+          as: commit
+          config:
+            path: ./out
+            message: 'rendered(${{ ctx.stage }}): promote ${{ imageFrom(vars.imageRepo).Tag }}'
+        - uses: git-push
+          config:
+            path: ./out
+        - uses: argocd-update
+          config:
+            apps:
+              - name: guestbook-rendered-${{ ctx.stage }}
+                sources:
+                  - repoURL: ${{ vars.gitopsRepo }}
+                    desiredRevision: ${{ outputs.commit.commit }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: staging
+  namespace: guestbook-rendered
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: guestbook
+      sources:
+        stages:
+          - dev  # freight must pass dev before it is promotable here
+  promotionTemplate:
+    spec:
+      vars:
+        - name: gitopsRepo
+          value: https://github.com/jake-painter/guestbook-kargo.git
+        - name: imageRepo
+          value: ghcr.io/jake-painter/guestbook
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: ${{ vars.gitopsRepo }}
+            checkout:
+              - branch: main
+                path: ./src
+              - branch: env/${{ ctx.stage }}
+                create: true
+                path: ./out
+        - uses: git-clear
+          config:
+            path: ./out
+        - uses: kustomize-set-image
+          config:
+            path: ./src/rendered/${{ ctx.stage }}
+            images:
+              - image: ${{ vars.imageRepo }}
+                tag: ${{ imageFrom(vars.imageRepo).Tag }}
+        - uses: kustomize-build
+          config:
+            path: ./src/rendered/${{ ctx.stage }}
+            outPath: ./out/manifests.yaml
+        - uses: git-commit
+          as: commit
+          config:
+            path: ./out
+            message: 'rendered(${{ ctx.stage }}): promote ${{ imageFrom(vars.imageRepo).Tag }}'
+        - uses: git-push
+          config:
+            path: ./out
+        - uses: argocd-update
+          config:
+            apps:
+              - name: guestbook-rendered-${{ ctx.stage }}
+                sources:
+                  - repoURL: ${{ vars.gitopsRepo }}
+                    desiredRevision: ${{ outputs.commit.commit }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: guestbook-rendered
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: guestbook
+      sources:
+        stages:
+          - staging  # freight must pass staging before it is promotable here
+  promotionTemplate:
+    spec:
+      vars:
+        - name: gitopsRepo
+          value: https://github.com/jake-painter/guestbook-kargo.git
+        - name: imageRepo
+          value: ghcr.io/jake-painter/guestbook
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: ${{ vars.gitopsRepo }}
+            checkout:
+              - branch: main
+                path: ./src
+              - branch: env/${{ ctx.stage }}
+                create: true
+                path: ./out
+        - uses: git-clear
+          config:
+            path: ./out
+        - uses: kustomize-set-image
+          config:
+            path: ./src/rendered/${{ ctx.stage }}
+            images:
+              - image: ${{ vars.imageRepo }}
+                tag: ${{ imageFrom(vars.imageRepo).Tag }}
+        - uses: kustomize-build
+          config:
+            path: ./src/rendered/${{ ctx.stage }}
+            outPath: ./out/manifests.yaml
+        - uses: git-commit
+          as: commit
+          config:
+            path: ./out
+            message: 'rendered(${{ ctx.stage }}): promote ${{ imageFrom(vars.imageRepo).Tag }}'
+        - uses: git-push
+          config:
+            path: ./out
+        - uses: argocd-update
+          config:
+            apps:
+              - name: guestbook-rendered-${{ ctx.stage }}
+                sources:
+                  - repoURL: ${{ vars.gitopsRepo }}
+                    desiredRevision: ${{ outputs.commit.commit }}

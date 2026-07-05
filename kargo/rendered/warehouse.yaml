@@ -1,0 +1,14 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: guestbook
+  namespace: guestbook-rendered
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  subscriptions:
+    - image:
+        repoURL: ghcr.io/jake-painter/guestbook
+        semverConstraint: ">=0.0.0"  # requires semver tags (v0.1.0 etc.)
+        # tags not semver? drop the constraint and use:
+        # imageSelectionStrategy: NewestBuild
