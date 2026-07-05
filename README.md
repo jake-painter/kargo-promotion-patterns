@@ -1,1 +1,1 @@
-# guestbook-kargo
+# kargo-promotion-patterns

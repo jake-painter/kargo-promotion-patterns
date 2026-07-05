@@ -17,7 +17,7 @@ spec:
     spec:
       vars:
         - name: gitopsRepo
-          value: https://github.com/jake-painter/guestbook-kargo.git
+          value: https://github.com/jake-painter/kargo-promotion-patterns.git
         - name: imageRepo
           value: ghcr.io/jake-painter/guestbook
       steps:
@@ -68,7 +68,7 @@ spec:
     spec:
       vars:
         - name: gitopsRepo
-          value: https://github.com/jake-painter/guestbook-kargo.git
+          value: https://github.com/jake-painter/kargo-promotion-patterns.git
         - name: imageRepo
           value: ghcr.io/jake-painter/guestbook
       steps:
@@ -119,7 +119,7 @@ spec:
     spec:
       vars:
         - name: gitopsRepo
-          value: https://github.com/jake-painter/guestbook-kargo.git
+          value: https://github.com/jake-painter/kargo-promotion-patterns.git
         - name: imageRepo
           value: ghcr.io/jake-painter/guestbook
       steps:
